@@ -38,6 +38,7 @@ class DataSet(object):
         self.labels = np.array(self.labels)
         self.count = len(self.image_files)
         self.num_batches = math.ceil(self.count / self.batch_size)
+        self.fake_count = self.num_batches * self.batch_size - self.count
         self.idxs = list(range(self.count))
         if self.augmented:
             self.build_augmentor()
@@ -63,11 +64,14 @@ class DataSet(object):
     def next_batch(self):
         assert self.has_next_batch()
 
-        start = self.current_idx
-        end = self.current_idx + self.batch_size
-        if end > self.count:
-            end = self.count
-        current_idxs = self.idxs[start:end]
+        if self.has_full_next_batch():
+            start, end = self.current_idx, \
+                         self.current_idx + self.batch_size
+            current_idxs = self.idxs[start:end]
+        else:
+            start, end = self.current_idx, self.count
+            current_idxs = self.idxs[start:end] + \
+                           list(np.random.choice(self.count, self.fake_count))
 
         image_files = self.image_files[current_idxs]
 
