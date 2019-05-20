@@ -81,8 +81,8 @@ class Recognizer:
         global_avg_pool = self.layers.global_avg_pool2d(res5c_feats,
                                                         keepdims=False,
                                                         name='global_avg_pool')
-        global_avg_pool = self.layers.dropout(global_avg_pool,
-                                              name='global_avg_pool_dropout')
+        # global_avg_pool = self.layers.dropout(global_avg_pool,
+        #                                       name='global_avg_pool_dropout')
 
         logits = []
         probabilities = []
