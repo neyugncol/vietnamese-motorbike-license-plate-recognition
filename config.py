@@ -25,10 +25,10 @@ class HyperParameters(object):
         self.beta2 = 0.999
         self.epsilon = 1e-6
 
-        self.save_dir = './models/'
+        self.save_dir = '/content/drive/My Drive/deep-learning/models/license-plate-recognizer-model/'
         self.summary_period = 10
         self.summary_dir = './summary/'
-        self.eval_period = 500
+        self.eval_period = 283
 
         self.train_image_dir = './data/train_images'
         self.val_image_dir = './data/val_images'
