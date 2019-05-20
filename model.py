@@ -234,7 +234,7 @@ class Recognizer:
 
         losses = []
         for i, num_list in enumerate(self.license_number_list):
-            loss = tf.losses.sparse_softmax_cross_entropy(labels=labels[i],
+            loss = tf.losses.sparse_softmax_cross_entropy(labels=labels[:, i],
                                                           logits=self.logits[i])
             losses.append(loss)
 
@@ -280,7 +280,7 @@ class Recognizer:
                         'accuracy': accuracy}
         self.metric_ops = {'cross_entropy_loss': avg_cross_entropy_loss_op,
                            'regularization_loss': avg_reg_loss_op,
-                           'total_loss': avg_total_loss,
+                           'total_loss': avg_total_loss_op,
                            'accuracy': accuracy_op}
 
         self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
