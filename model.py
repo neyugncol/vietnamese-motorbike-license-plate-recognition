@@ -313,8 +313,8 @@ class Recognizer:
                 assert len(label) == len(self.license_number_list)
                 idx = self.license_number_list[i].index(num)
                 mapped_label.append(idx)
+            mapped_label = np.array(mapped_label)
             mapped_labels.append(mapped_label)
-
         mapped_labels = np.array(mapped_label)
 
         return mapped_labels
