@@ -81,8 +81,8 @@ class Recognizer:
         global_avg_pool = self.layers.global_avg_pool2d(res5c_feats,
                                                         keepdims=False,
                                                         name='global_avg_pool')
-        # global_avg_pool = self.layers.dropout(global_avg_pool,
-        #                                       name='global_avg_pool_dropout')
+        global_avg_pool = self.layers.dropout(global_avg_pool,
+                                              name='global_avg_pool_dropout')
 
         logits = []
         probabilities = []
@@ -314,6 +314,8 @@ class Recognizer:
                 idx = self.license_number_list[i].index(num)
                 mapped_label.append(idx)
             mapped_labels.append(mapped_label)
+
+        mapped_labels = np.array(mapped_label)
 
         return mapped_labels
 
