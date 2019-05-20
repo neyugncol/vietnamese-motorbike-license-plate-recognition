@@ -20,13 +20,13 @@ class Recognizer:
             '0123456789',
             'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
             '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            '0123456789'
-            '0123456789'
-            '0123456789'
-            '0123456789'
+            '0123456789',
+            '0123456789',
+            '0123456789',
+            '0123456789',
             '0123456789'
         ]
-        self.is_train = tf.placeholder_with_default(False, name='is_train')
+        self.is_train = tf.placeholder_with_default(False, shape=[], name='is_train')
 
         self.layers = NeuralLayers(trainable=self.trainable,
                                    is_train=self.is_train,
@@ -230,7 +230,7 @@ class Recognizer:
 
         global_step = tf.train.get_or_create_global_step()
 
-        labels = tf.placeholder(dtype=tf.float32, shape=[None, len(self.license_number_list)])
+        labels = tf.placeholder(dtype=tf.int64, shape=[None, len(self.license_number_list)])
 
         losses = []
         for i, num_list in enumerate(self.license_number_list):
@@ -250,7 +250,7 @@ class Recognizer:
                                                  learning_rate=learning_rate)
 
         gradients, variables = zip(*optimizer.compute_gradients(total_loss, ))
-        gradients, _ = tf.clip_by_global_norm(gradients, hparams.clip_gradient_norm)
+        gradients, _ = tf.clip_by_global_norm(gradients, hparams.clip_gradients)
 
         train_op = optimizer.apply_gradients(zip(gradients, variables),
                                              global_step=global_step)
@@ -305,14 +305,17 @@ class Recognizer:
         for var, value in zip(self.metric_vars, self.metric_values):
             sess.run(var.assign(value))
 
-    def map_label(self, label):
-        assert len(label) == len(self.license_number_list)
-        mapped_label = []
-        for i, num in enumerate(label):
-            idx = self.license_number_list[i].index(num)
-            mapped_label.append(idx)
+    def map_labels(self, labels):
+        mapped_labels = []
+        for label in labels:
+            mapped_label = []
+            for i, num in enumerate(label):
+                assert len(label) == len(self.license_number_list)
+                idx = self.license_number_list[i].index(num)
+                mapped_label.append(idx)
+            mapped_labels.append(mapped_label)
 
-        return label
+        return mapped_labels
 
     def train(self, sess, train_dataset, val_dataset, test_dataset=None, load_previous=False):
 
@@ -340,9 +343,9 @@ class Recognizer:
 
         # Training
         for _ in tqdm(range(self.hparams.num_epochs), desc='epoch'):
-            for _ in tqdm(train_dataset.num_batches, desc='batch', leave=False):
+            for _ in tqdm(range(train_dataset.num_batches), desc='batch', leave=False):
                 images, labels = train_dataset.next_batch()
-                labels = self.map_label(labels)
+                labels = self.map_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels,
@@ -363,7 +366,7 @@ class Recognizer:
                     sess.run(self.reset_metric_op)
                     for _ in tqdm(range(val_dataset.num_batches), desc='val', leave=False):
                         images, labels = val_dataset.next_batch()
-                        labels = self.map_label(labels)
+                        labels = self.map_labels(labels)
 
                         feed_dict = {self.images: images,
                                      self.labels: labels}
@@ -392,9 +395,9 @@ class Recognizer:
         # Testing
         if test_dataset is not None:
             sess.run(self.reset_metric_op)
-            for _ in tqdm(test_dataset.num_batches, desc='testing', leave=False):
+            for _ in tqdm(range(test_dataset.num_batches), desc='testing', leave=False):
                 images, labels = val_dataset.next_batch()
-                labels = self.map_label(labels)
+                labels = self.map_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels}

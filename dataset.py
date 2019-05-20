@@ -28,11 +28,11 @@ class DataSet(object):
         self.labels = []
         for file in image_files:
             if file.endswith('.jpg') or file.endswith('.jpeg'):
-                label = file.split('.')
+                label = file.split('.')[0]
                 if len(label) != 9:
                     continue
                 self.image_files.append(file)
-                self.labels.append(file.split('.')[0])
+                self.labels.append(label)
 
         self.image_files = np.array(self.image_files)
         self.labels = np.array(self.labels)
@@ -86,19 +86,19 @@ class DataSet(object):
     def load_images(self, image_files):
         images = []
         for image_file in image_files:
-            image = self.load_image(image_file)
+            image = self.load_image(self.image_dir + '/' + image_file)
             images.append(image)
 
         if self.augmented:
             self.augmentor.augment_images(images)
 
-        images = images / 255.0
+        images = np.array(images) / 255.0
 
         return images
 
     def load_image(self, image_file):
         image = cv2.imread(image_file)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = cv2.resize(image, self.image_size[:2])
+        image = cv2.resize(image, tuple(self.image_size[:2]))
 
         return image
