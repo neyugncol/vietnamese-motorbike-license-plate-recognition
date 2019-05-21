@@ -67,6 +67,8 @@ class DataSet(object):
         end = self.current_idx + self.batch_size
         if end > self.count:
             end = self.count
+        self.current_idx = end
+
         current_idxs = self.idxs[start:end]
 
         image_files = self.image_files[current_idxs]
