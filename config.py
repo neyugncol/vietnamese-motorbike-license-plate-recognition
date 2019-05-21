@@ -13,7 +13,7 @@ class HyperParameters(object):
         self.num_epochs = 100
         self.batch_size = 32
         self.optimizer = 'Adam'  # 'Adam', 'RMSProp', 'Momentum' or 'SGD'
-        self.initial_learning_rate = 0.01
+        self.initial_learning_rate = 0.0001
         self.learning_rate_decay_factor = 1.0
         self.num_steps_per_decay = 10000
         self.clip_gradients = 5.0
