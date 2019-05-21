@@ -271,8 +271,9 @@ class Recognizer:
         avg_total_loss, avg_total_loss_op = tf.metrics.mean_tensor(self.total_loss)
 
         predictions = tf.stack(self.predictions, axis=1)
-        accuracy, accuracy_op = tf.metrics.accuracy(labels=self.labels,
-                                                    predictions=predictions)
+        different_count = tf.reduce_sum(tf.cast(tf.not_equal(self.labels, predictions), tf.int64), axis=1)
+        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.zeros_like(different_count),
+                                                    predictions=different_count)
 
         self.metrics = {'cross_entropy_loss': avg_cross_entropy_loss,
                         'regularization_loss': avg_reg_loss,
@@ -355,8 +356,8 @@ class Recognizer:
                 train_record = sess.run(train_fetches, feed_dict=feed_dict)
 
                 tqdm.write("Train step {}: total loss: {:>10.5f}   accuracy: {:8.2f}".format(train_record['global_step'],
-                                                                                       train_record['total_loss'],
-                                                                                       train_record['accuracy'] * 100))
+                                                                                             train_record['total_loss'],
+                                                                                             train_record['accuracy'] * 100))
                 if train_record['global_step'] % hparams.summary_period == 0:
                     summary = sess.run(self.summary)
                     train_writer.add_summary(summary, train_record['global_step'])
@@ -377,6 +378,8 @@ class Recognizer:
                     tqdm.write("Validation step {}: total loss: {:>10.5f}   accuracy: {:8.2f}".format(train_record['global_step'],
                                                                                                       val_record['total_loss'],
                                                                                                       val_record['accuracy'] * 100))
+                    tqdm.write('cross_loss {}  reg loss {}'.format(val_record['cross_entropy_loss'],
+                                                                   val_record['regularization_loss']))
                     summary = sess.run(self.summary)
                     val_writer.add_summary(summary, train_record['global_step'])
                     val_writer.flush()
