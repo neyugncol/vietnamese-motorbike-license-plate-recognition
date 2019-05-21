@@ -13,7 +13,7 @@ class HyperParameters(object):
         self.num_epochs = 100
         self.batch_size = 32
         self.optimizer = 'Adam'  # 'Adam', 'RMSProp', 'Momentum' or 'SGD'
-        self.initial_learning_rate = 0.0001
+        self.initial_learning_rate = 0.001
         self.learning_rate_decay_factor = 1.0
         self.num_steps_per_decay = 10000
         self.clip_gradients = 5.0
@@ -26,7 +26,7 @@ class HyperParameters(object):
         self.epsilon = 1e-6
 
         self.save_dir = '/content/drive/My Drive/deep-learning/models/license-plate-recognizer-model/'
-        self.summary_period = 10
+        self.summary_period = 1
         self.summary_dir = './summary/'
         self.eval_period = 283
 

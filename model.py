@@ -1,7 +1,6 @@
 import os
 import tensorflow as tf
 import numpy as np
-import math
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
@@ -332,14 +331,14 @@ class Recognizer:
         return decoded_predictions
 
     def train(self, sess, train_dataset, val_dataset, test_dataset=None, load_previous=False):
-
         hparams = self.hparams
 
         if not os.path.exists(hparams.summary_dir):
             os.mkdir(hparams.summary_dir)
         train_writer = tf.summary.FileWriter(hparams.summary_dir + '/train', sess.graph)
         val_writer = tf.summary.FileWriter(hparams.summary_dir + '/val')
-        test_writer = tf.summary.FileWriter(hparams.summary_dir + '/test')
+        if test_dataset is not None:
+            test_writer = tf.summary.FileWriter(hparams.summary_dir + '/test')
 
         train_fetches = {'train_op': self.train_op,
                          'global_step': self.global_step}
@@ -390,8 +389,6 @@ class Recognizer:
                     tqdm.write("Validation step {}: total loss: {:>10.5f}   accuracy: {:8.2f}".format(train_record['global_step'],
                                                                                                       val_record['total_loss'],
                                                                                                       val_record['accuracy'] * 100))
-                    tqdm.write('cross_loss {}  reg loss {}'.format(val_record['cross_entropy_loss'],
-                                                                   val_record['regularization_loss']))
                     summary = sess.run(self.summary)
                     val_writer.add_summary(summary, train_record['global_step'])
                     val_writer.flush()
@@ -494,7 +491,7 @@ class Recognizer:
         if self.saver is None:
             self.saver = tf.train.Saver()
         path = path or self.hparams.save_dir
-        global_step = global_step or self.global_step.eval()
+        global_step = global_step or self.global_step.eval(session=sess)
 
         self.saver.save(sess, path + '/recognizer-model.ckpt', global_step=global_step)
 

@@ -44,7 +44,7 @@ class DataSet(object):
         self.reset()
 
     def build_augmentor(self):
-        self.augmentor = iaa.Sometimes(0.5,
+        self.augmentor = iaa.Sometimes(0.7,
                                        iaa.OneOf([
                                            iaa.Affine(scale=(0.8, 1.2)),
                                            iaa.FastSnowyLandscape(lightness_multiplier=2.0),
