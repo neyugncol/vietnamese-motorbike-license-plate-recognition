@@ -265,27 +265,14 @@ class Recognizer:
         self.train_op = train_op
 
     def build_metrics(self):
-
-        avg_cross_entropy_loss, avg_cross_entropy_loss_op = tf.metrics.mean_tensor(self.cross_entropy_loss)
-        avg_reg_loss, avg_reg_loss_op = tf.metrics.mean_tensor(self.regularization_loss)
-        avg_total_loss, avg_total_loss_op = tf.metrics.mean_tensor(self.total_loss)
-
         predictions = tf.stack(self.predictions, axis=1)
-        different_count = tf.reduce_sum(tf.cast(tf.not_equal(self.labels, predictions), tf.int64), axis=1)
-        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.zeros_like(different_count),
-                                                    predictions=different_count)
+        different_count = tf.reduce_sum(tf.cast(tf.not_equal(self.labels, predictions), tf.int32), axis=1)
+        accuracy = tf.divide(tf.count_nonzero(different_count, dtype=tf.int32), tf.size(different_count))
 
-        self.metrics = {'cross_entropy_loss': avg_cross_entropy_loss,
-                        'regularization_loss': avg_reg_loss,
-                        'total_loss': avg_total_loss,
+        self.metrics = {'cross_entropy_loss': self.cross_entropy_loss,
+                        'regularization_loss': self.regularization_loss,
+                        'total_loss': self.total_loss,
                         'accuracy': accuracy}
-        self.metric_ops = {'cross_entropy_loss': avg_cross_entropy_loss_op,
-                           'regularization_loss': avg_reg_loss_op,
-                           'total_loss': avg_total_loss_op,
-                           'accuracy': accuracy_op}
-
-        self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
-        self.reset_metric_op = tf.variables_initializer(self.metric_vars)
 
     def build_summary(self):
 
@@ -297,14 +284,6 @@ class Recognizer:
             tf.summary.scalar('learning_rate', self.learning_rate)
 
         self.summary = tf.summary.merge_all()
-
-    def cache_metric_values(self, sess):
-        metric_values = sess.run(self.metric_vars)
-        self.metric_values = metric_values
-
-    def restore_metric_values(self, sess):
-        for var, value in zip(self.metric_vars, self.metric_values):
-            sess.run(var.assign(value))
 
     def map_labels(self, labels):
         mapped_labels = []
@@ -342,12 +321,15 @@ class Recognizer:
         test_writer = tf.summary.FileWriter(hparams.summary_dir + '/test')
 
         train_fetches = {'train_op': self.train_op,
-                         'global_step': self.global_step}
-        train_fetches.update(self.metric_ops)
-        val_fetches = self.metric_ops
+                         'global_step': self.global_step,
+                         'summary': self.summary}
+        train_fetches.update(self.metrics)
+        val_fetches = {'summary': self.summary}
+        val_fetches.update(self.metrics)
 
         if test_dataset is not None:
-            test_fetches = self.metric_ops
+            test_fetches = {'summary': self.summary}
+            test_fetches.update(self.metrics)
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -371,13 +353,10 @@ class Recognizer:
                                                                                              train_record['total_loss'],
                                                                                              train_record['accuracy'] * 100))
                 if train_record['global_step'] % hparams.summary_period == 0:
-                    summary = sess.run(self.summary)
-                    train_writer.add_summary(summary, train_record['global_step'])
+                    train_writer.add_summary(train_record['summary'], train_record['global_step'])
 
                 # Validation
                 if (train_record['global_step'] + 1) % hparams.eval_period == 0:
-                    self.cache_metric_values(sess)
-                    sess.run(self.reset_metric_op)
                     for _ in tqdm(range(val_dataset.num_batches), desc='val', leave=False):
                         images, labels = val_dataset.next_batch()
                         labels = self.map_labels(labels)
@@ -392,14 +371,9 @@ class Recognizer:
                                                                                                       val_record['accuracy'] * 100))
                     tqdm.write('cross_loss {}  reg loss {}'.format(val_record['cross_entropy_loss'],
                                                                    val_record['regularization_loss']))
-                    summary = sess.run(self.summary)
-                    val_writer.add_summary(summary, train_record['global_step'])
+                    val_writer.add_summary(val_record['summary'], train_record['global_step'])
                     val_writer.flush()
                     val_dataset.reset()
-
-                    self.restore_metric_values(sess)
-
-            sess.run(self.reset_metric_op)
 
             self.save(sess, global_step=train_record['global_step'])
 
@@ -410,7 +384,6 @@ class Recognizer:
 
         # Testing
         if test_dataset is not None:
-            sess.run(self.reset_metric_op)
             for _ in tqdm(range(test_dataset.num_batches), desc='testing', leave=False):
                 images, labels = val_dataset.next_batch()
                 labels = self.map_labels(labels)
@@ -423,8 +396,7 @@ class Recognizer:
             tqdm.write(
                 "Testing: total loss: {:>10.5f}   accuracy: {:8.2f}".format(test_record['total_loss'],
                                                                             test_record['accuracy'] * 100))
-            summary = sess.run(self.summary)
-            test_writer.add_summary(summary, train_record['global_step'])
+            test_writer.add_summary(test_record['summary'], train_record['global_step'])
             test_writer.flush()
             test_writer.close()
 
@@ -478,7 +450,7 @@ class Recognizer:
         self.load(sess)
 
         # Testing
-        for _ in tqdm(range(test_dataset.num_batches), desc='batch', leave=False):
+        for _ in tqdm(range(test_dataset.num_batches), desc='batch'):
             images = test_dataset.next_batch()
 
             predictions = sess.run(self.predictions, feed_dict={self.images: images})
@@ -488,7 +460,7 @@ class Recognizer:
             for image, prediction in zip(images, predictions):
                 plt.imshow(image)
                 plt.title(prediction)
-                plt.savefig(hparams.test_result_dir)
+                plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
 
     def save(self, sess, path=None, global_step=None):
         if self.saver is None:
