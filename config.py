@@ -33,3 +33,4 @@ class HyperParameters(object):
         self.train_image_dir = './data/train_images'
         self.val_image_dir = './data/val_images'
         self.test_image_dir = './data/test_images'
+        self.test_result_dir = './data/test_result'

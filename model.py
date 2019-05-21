@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 import math
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from utils import NeuralLayers, Optimizer
 
@@ -98,7 +99,6 @@ class Recognizer:
             logits.append(logit)
             probabilities.append(probability)
             predictions.append(prediction)
-
 
         self.images = images
         self.logits = logits
@@ -319,6 +319,18 @@ class Recognizer:
 
         return mapped_labels
 
+    def prediction_decode(self, predictions):
+        predictions = np.column_stack(predictions)
+        decoded_predictions = []
+        for prediction in predictions:
+            decoded_prediction = []
+            for i, num_idx in enumerate(prediction):
+                decoded_prediction.append(self.license_number_list[i][num_idx])
+            decoded_prediction = ''.join(decoded_prediction)
+            decoded_predictions.append(decoded_prediction)
+
+        return decoded_predictions
+
     def train(self, sess, train_dataset, val_dataset, test_dataset=None, load_previous=False):
 
         hparams = self.hparams
@@ -456,6 +468,27 @@ class Recognizer:
         eval_writer.add_summary(summary, global_step)
         eval_writer.flush()
         eval_writer.close()
+
+    def test(self, sess, test_dataset):
+        hparams = self.hparams
+
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+
+        self.load(sess)
+
+        # Testing
+        for _ in tqdm(range(test_dataset.num_batches), desc='batch', leave=False):
+            images = test_dataset.next_batch()
+
+            predictions = sess.run(self.predictions, feed_dict={self.images: images})
+
+            predictions = self.prediction_decode(predictions)
+
+            for image, prediction in zip(images, predictions):
+                plt.imshow(image)
+                plt.title(prediction)
+                plt.savefig(hparams.test_result_dir)
 
     def save(self, sess, path=None, global_step=None):
         if self.saver is None:

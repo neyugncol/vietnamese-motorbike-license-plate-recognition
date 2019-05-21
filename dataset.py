@@ -10,13 +10,13 @@ class DataSet(object):
                  image_dir,
                  batch_size,
                  image_size,
-                 is_train=False,
+                 include_label=False,
                  shuffle=True,
                  augmented=False):
         self.image_dir = image_dir
         self.batch_size = batch_size
         self.image_size = image_size
-        self.is_train = is_train
+        self.include_label = include_label
         self.shuffle = shuffle
         self.augmented = augmented
         self.setup()
@@ -29,7 +29,7 @@ class DataSet(object):
         for file in image_files:
             if file.endswith('.jpg') or file.endswith('.jpeg'):
                 label = file.split('.')[0]
-                if len(label) != 9:
+                if len(label) != 9 and self.include_label:
                     continue
                 self.image_files.append(file)
                 self.labels.append(label)
@@ -38,9 +38,8 @@ class DataSet(object):
         self.labels = np.array(self.labels)
         self.count = len(self.image_files)
         self.num_batches = math.ceil(self.count / self.batch_size)
-        self.fake_count = self.num_batches * self.batch_size - self.count
         self.idxs = list(range(self.count))
-        if self.augmented:
+        if self.augmented and self.include_label:
             self.build_augmentor()
         self.reset()
 
@@ -64,14 +63,11 @@ class DataSet(object):
     def next_batch(self):
         assert self.has_next_batch()
 
-        if self.has_full_next_batch():
-            start, end = self.current_idx, \
-                         self.current_idx + self.batch_size
-            current_idxs = self.idxs[start:end]
-        else:
-            start, end = self.current_idx, self.count
-            current_idxs = self.idxs[start:end] + \
-                           list(np.random.choice(self.count, self.fake_count))
+        start = self.current_idx
+        end = self.current_idx + self.batch_size
+        if end > self.count:
+            end = self.count
+        current_idxs = self.idxs[start:end]
 
         image_files = self.image_files[current_idxs]
 
@@ -79,13 +75,13 @@ class DataSet(object):
 
         labels = self.labels[current_idxs]
 
-        return images, labels
+        if self.include_label:
+            return images, labels
+        else:
+            return images
 
     def has_next_batch(self):
         return self.current_idx < self.count
-
-    def has_full_next_batch(self):
-        return self.current_idx + self.batch_size <= self.count
 
     def load_images(self, image_files):
         images = []
@@ -93,7 +89,7 @@ class DataSet(object):
             image = self.load_image(self.image_dir + '/' + image_file)
             images.append(image)
 
-        if self.augmented:
+        if self.augmented and self.include_label:
             self.augmentor.augment_images(images)
 
         images = np.array(images) / 255.0
