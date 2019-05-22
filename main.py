@@ -47,7 +47,7 @@ def main(args):
                         val_dataset=val_dataset,
                         load_previous=True)
     else:
-        test_dataset = DataSet(hparams.val_image_dir,
+        test_dataset = DataSet(hparams.test_image_dir,
                               hparams.batch_size, [224, 224, 3],
                               include_label=False,
                               shuffle=False,
