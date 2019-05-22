@@ -251,8 +251,10 @@ class Recognizer:
         gradients, variables = zip(*optimizer.compute_gradients(total_loss, ))
         gradients, _ = tf.clip_by_global_norm(gradients, hparams.clip_gradients)
 
-        train_op = optimizer.apply_gradients(zip(gradients, variables),
-                                             global_step=global_step)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            train_op = optimizer.apply_gradients(zip(gradients, variables),
+                                                 global_step=global_step)
 
         self.global_step = global_step
         self.labels = labels
@@ -492,7 +494,7 @@ class Recognizer:
             for image, prediction in zip(images, predictions):
                 plt.imshow(image)
                 plt.title(prediction)
-                plt.savefig(hparams.test_result_dir)
+                plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
 
     def save(self, sess, path=None, global_step=None):
         if self.saver is None:
