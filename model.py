@@ -277,10 +277,12 @@ class Recognizer:
         self.metrics = {'cross_entropy_loss': avg_cross_entropy_loss,
                         'regularization_loss': avg_reg_loss,
                         'total_loss': avg_total_loss,
+                        'partial_accuracy': partial_accuracy,
                         'accuracy': accuracy}
         self.metric_ops = {'cross_entropy_loss': avg_cross_entropy_loss_op,
                            'regularization_loss': avg_reg_loss_op,
                            'total_loss': avg_total_loss_op,
+                           'partial_accuracy': partial_accuracy_op,
                            'accuracy': accuracy_op}
 
         self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
@@ -366,9 +368,11 @@ class Recognizer:
 
                 train_record = sess.run(train_fetches, feed_dict=feed_dict)
 
-                tqdm.write("Train step {}: total loss: {:>10.5f}   accuracy: {:8.2f}".format(train_record['global_step'],
-                                                                                             train_record['total_loss'],
-                                                                                             train_record['accuracy'] * 100))
+                tqdm.write("Train step {}: total loss: {:>10.5f}   partial accuracy: {:8.2f}   accuracy: {:8.2f}"
+                           .format(train_record['global_step'],
+                                   train_record['total_loss'],
+                                   train_record['partial_accuracy'] * 100,
+                                   train_record['accuracy'] * 100))
                 if train_record['global_step'] % hparams.summary_period == 0:
                     summary = sess.run(self.summary)
                     train_writer.add_summary(summary, train_record['global_step'])
@@ -386,9 +390,11 @@ class Recognizer:
 
                         val_record = sess.run(val_fetches, feed_dict=feed_dict)
 
-                    tqdm.write("Validation step {}: total loss: {:>10.5f}   accuracy: {:8.2f}".format(train_record['global_step'],
-                                                                                                      val_record['total_loss'],
-                                                                                                      val_record['accuracy'] * 100))
+                    tqdm.write("Validation step {}: total loss: {:>10.5f}   partial accuracy: {:8.2f}   accuracy: {:8.2f}"
+                               .format(train_record['global_step'],
+                                       val_record['total_loss'],
+                                       val_record['partial_accuracy'] * 100,
+                                       val_record['accuracy'] * 100))
                     summary = sess.run(self.summary)
                     val_writer.add_summary(summary, train_record['global_step'])
                     val_writer.flush()
@@ -417,9 +423,10 @@ class Recognizer:
 
                 test_record = sess.run(test_fetches, feed_dict=feed_dict)
 
-            tqdm.write(
-                "Testing: total loss: {:>10.5f}   accuracy: {:8.2f}".format(test_record['total_loss'],
-                                                                            test_record['accuracy'] * 100))
+            tqdm.write("Testing: total loss: {:>10.5f}   partial accuracy: {:8.2f}   accuracy: {:8.2f}"
+                       .format(test_record['total_loss'],
+                               test_record['partial_accuracy'] * 100,
+                               test_record['accuracy'] * 100))
             summary = sess.run(self.summary)
             test_writer.add_summary(summary, train_record['global_step'])
             test_writer.flush()
