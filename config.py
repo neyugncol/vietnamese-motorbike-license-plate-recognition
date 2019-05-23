@@ -34,7 +34,6 @@ class HyperParameters(object):
             '0123456789',
             '0123456789',
             '0123456789',
-            '0123456789'
         ]
 
         self.save_dir = '/content/drive/My Drive/deep-learning/models/license-plate-recognizer-model/'
