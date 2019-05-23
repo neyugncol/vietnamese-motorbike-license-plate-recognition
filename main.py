@@ -11,16 +11,19 @@ FLAGS = tf.app.flags.FLAGS
 
 tf.flags.DEFINE_string('phase', 'train',
                        '')
-# tf.flags.DEFINE_string('dataset_dir', '/dataset',
-#                        'Directory where the data needed for training is stored')
-# tf.flags.DEFINE_string('model_dir', '/models',
-#                        'Directory where to save or load model checkpoint')
-# tf.flags.DEFINE_string('summary_dir', '/summary',
-#                        'Directory where to save summary data')
+tf.flags.DEFINE_string('dataset_dir', '/dataset',
+                       'Directory where the data needed for training is stored')
+tf.flags.DEFINE_bool('load_checkpoint', True,
+                     'Load previous checkpoint')
+tf.flags.DEFINE_string('checkpoint', None,
+                       'Path of checkpoint file')
+tf.flags.DEFINE_string('summary_dir', '',
+                       'Directory where to save summary data')
 
 
 def main(args):
     hparams = HyperParameters()
+    hparams.summary_dir = FLAGS.summary_dir if FLAGS.summary_dir else hparams.summary_dir
 
     if FLAGS.phase == 'train':
         train_dataset = DataSet(hparams.train_image_dir,
@@ -45,7 +48,8 @@ def main(args):
             model.train(sess,
                         train_dataset=train_dataset,
                         val_dataset=val_dataset,
-                        load_previous=True)
+                        load_checkpoint=FLAGS.load_checkpoint,
+                        checkpoint=FLAGS.checkpoint)
     else:
         test_dataset = DataSet(hparams.test_image_dir,
                               hparams.batch_size, [224, 224, 3],
@@ -55,7 +59,10 @@ def main(args):
         with tf.Session() as sess:
             model = Recognizer(hparams,
                                trainable=True)
-            model.test(sess, test_dataset)
+            model.test(sess,
+                       test_dataset,
+                       load_checkpoint=FLAGS.load_checkpoint,
+                       checkpoint=FLAGS.checkpoint)
 
 
 if __name__ == '__main__':

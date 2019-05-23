@@ -351,7 +351,7 @@ class Recognizer:
 
         return decoded_predictions
 
-    def train(self, sess, train_dataset, val_dataset, test_dataset=None, load_previous=False):
+    def train(self, sess, train_dataset, val_dataset, test_dataset=None, load_checkpoint=False, checkpoint=None):
         hparams = self.hparams
 
         if not os.path.exists(hparams.summary_dir):
@@ -372,8 +372,8 @@ class Recognizer:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-        if load_previous:
-            self.load(sess)
+        if load_checkpoint:
+            self.load(sess, checkpoint)
 
         # Training
         for _ in tqdm(range(self.hparams.num_epochs), desc='epoch'):
@@ -409,11 +409,12 @@ class Recognizer:
 
                         val_record = sess.run(val_fetches, feed_dict=feed_dict)
 
-                    tqdm.write("Validation step {}: total loss: {:>10.5f}   partial accuracy: {:8.2f}   accuracy: {:8.2f}"
-                               .format(train_record['global_step'],
-                                       val_record['total_loss'],
-                                       val_record['partial_accuracy'] * 100,
-                                       val_record['accuracy'] * 100))
+                    tqdm.write(
+                        "Validation step {}: total loss: {:>10.5f}   partial accuracy: {:8.2f}   accuracy: {:8.2f}"
+                        .format(train_record['global_step'],
+                                val_record['total_loss'],
+                                val_record['partial_accuracy'] * 100,
+                                val_record['accuracy'] * 100))
                     summary = sess.run(self.summary)
                     val_writer.add_summary(summary, train_record['global_step'])
                     val_writer.flush()
@@ -492,13 +493,14 @@ class Recognizer:
         eval_writer.flush()
         eval_writer.close()
 
-    def test(self, sess, test_dataset):
+    def test(self, sess, test_dataset, load_checkpoint=False, checkpoint=None):
         hparams = self.hparams
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-        self.load(sess)
+        if load_checkpoint:
+            self.load(sess, checkpoint)
 
         # Testing
         for _ in tqdm(range(test_dataset.num_batches), desc='batch', leave=False):
@@ -514,18 +516,19 @@ class Recognizer:
                 plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
                 plt.close()
 
-    def save(self, sess, path=None, global_step=None):
+    def save(self, sess, save_dir=None, global_step=None):
         if self.saver is None:
             self.saver = tf.train.Saver()
-        path = path or self.hparams.save_dir
+        save_dir = save_dir or self.hparams.save_dir
         global_step = global_step or self.global_step.eval(session=sess)
 
-        self.saver.save(sess, path + '/recognizer-model.ckpt', global_step=global_step)
+        self.saver.save(sess, save_dir + '/recognizer-model.ckpt', global_step=global_step)
 
-    def load(self, sess, path=None):
+    def load(self, sess, checkpoint=None):
         if self.saver is None:
             self.saver = tf.train.Saver()
-        path = path or self.hparams.save_dir
-        latest_checkpoint = tf.train.latest_checkpoint(path)
-        if latest_checkpoint is not None:
-            self.saver.restore(sess, latest_checkpoint)
+        if checkpoint is None:
+            checkpoint = tf.train.latest_checkpoint(self.hparams.save_dir)
+            if checkpoint is None:
+                return
+        self.saver.restore(sess, checkpoint)
