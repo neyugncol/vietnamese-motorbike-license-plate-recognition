@@ -289,10 +289,10 @@ class Recognizer:
             loss, loss_op = tf.metrics.mean_tensor(self.num_losses[i])
             accuracy, accuracy_op = tf.metrics.accuracy(labels=self.labels[:, i],
                                                         predictions=self.predictions[i])
-            self.metrics.update({'n{}_loss'.format(i): loss,
-                                 'n{}_accuracy'.format(i): accuracy})
-            self.metric_ops.update({'n{}_loss'.format(i): loss_op,
-                                    'n{}_accuracy'.format(i): accuracy_op})
+            self.metrics.update({'num{}_loss'.format(i): loss,
+                                 'num{}_accuracy'.format(i): accuracy})
+            self.metric_ops.update({'num{}_loss'.format(i): loss_op,
+                                    'num{}_accuracy'.format(i): accuracy_op})
 
         self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
         self.reset_metric_op = tf.variables_initializer(self.metric_vars)
@@ -300,8 +300,13 @@ class Recognizer:
     def build_summary(self):
 
         with tf.name_scope('metric'):
+            branch_scope = tf.name_scope('branch')
             for metric_name, metric_tensor in self.metrics.items():
-                tf.summary.scalar(metric_name, metric_tensor)
+                if metric_name.startswith('num'):
+                    with tf.name_scope(branch_scope):
+                        tf.summary.scalar(metric_name, metric_tensor)
+                else:
+                    tf.summary.scalar(metric_name, metric_tensor)
 
         with tf.name_scope('hyperparam'):
             tf.summary.scalar('learning_rate', self.learning_rate)
