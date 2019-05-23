@@ -27,9 +27,9 @@ class DataSet(object):
         self.image_files = []
         self.labels = []
         for file in image_files:
-            file = file.upper()
-            if file.endswith('.JPG') or file.endswith('.JPEG'):
-                label = file.split('.')[0]
+            f = file.upper()
+            if f.endswith('.JPG') or f.endswith('.JPEG'):
+                label = f.split('.')[0]
                 if len(label) != 9 and self.include_label:
                     continue
                 self.image_files.append(file)
