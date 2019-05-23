@@ -231,10 +231,15 @@ class Recognizer:
 
         labels = tf.placeholder(dtype=tf.int64, shape=[None, len(self.license_number_list)])
 
+        num_losses = []
+        min_len = np.min([len(n) for n in self.license_number_list])
         losses = []
         for i, num_list in enumerate(self.license_number_list):
             loss = tf.losses.sparse_softmax_cross_entropy(labels=labels[:, i],
                                                           logits=self.logits[i])
+            num_losses.append(loss)
+            weight = len(num_list) / min_len
+            loss = weight * loss
             losses.append(loss)
 
         cross_entropy_loss = tf.add_n(losses)
@@ -252,12 +257,13 @@ class Recognizer:
         gradients, _ = tf.clip_by_global_norm(gradients, hparams.clip_gradients)
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops):
-            train_op = optimizer.apply_gradients(zip(gradients, variables),
-                                                 global_step=global_step)
+        train_op = optimizer.apply_gradients(zip(gradients, variables),
+                                             global_step=global_step)
+        train_op = tf.group([train_op, update_ops])
 
         self.global_step = global_step
         self.labels = labels
+        self.num_losses = num_losses
         self.cross_entropy_loss = cross_entropy_loss
         self.regularization_loss = regularization_loss
         self.total_loss = total_loss
@@ -272,9 +278,11 @@ class Recognizer:
         avg_total_loss, avg_total_loss_op = tf.metrics.mean_tensor(self.total_loss)
 
         predictions = tf.stack(self.predictions, axis=1)
-        different_count = tf.reduce_sum(tf.cast(tf.not_equal(self.labels, predictions), tf.int64), axis=1)
-        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.zeros_like(different_count),
-                                                    predictions=different_count)
+        partial_accuracy, partial_accuracy_op = tf.metrics.accuracy(labels=self.labels,
+                                                                    predictions=predictions)
+        matches = tf.reduce_all(tf.equal(self.labels, predictions), axis=1)
+        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.ones_like(matches),
+                                                    predictions=matches)
 
         self.metrics = {'cross_entropy_loss': avg_cross_entropy_loss,
                         'regularization_loss': avg_reg_loss,
@@ -286,6 +294,15 @@ class Recognizer:
                            'total_loss': avg_total_loss_op,
                            'partial_accuracy': partial_accuracy_op,
                            'accuracy': accuracy_op}
+
+        for i, num_list in enumerate(self.license_number_list):
+            loss, loss_op = tf.metrics.mean_tensor(self.num_losses[i])
+            accuracy, accuracy_op = tf.metrics.accuracy(labels=self.labels[:, i],
+                                                        predictions=self.predictions[i])
+            self.metrics.update({'n{}_loss'.format(i): loss,
+                                 'n{}_accuracy'.format(i): accuracy})
+            self.metric_ops.update({'n{}_loss'.format(i): loss_op,
+                                    'n{}_accuracy'.format(i): accuracy_op})
 
         self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
         self.reset_metric_op = tf.variables_initializer(self.metric_vars)
@@ -309,20 +326,20 @@ class Recognizer:
         for var, value in zip(self.metric_vars, self.metric_values):
             sess.run(var.assign(value))
 
-    def map_labels(self, labels):
-        mapped_labels = []
+    def encode_labels(self, labels):
+        encoded_labels = []
         for label in labels:
             mapped_label = []
             for i, num in enumerate(label):
                 assert len(label) == len(self.license_number_list)
                 idx = self.license_number_list[i].index(num)
                 mapped_label.append(idx)
-            mapped_labels.append(mapped_label)
-        mapped_labels = np.array(mapped_labels)
+            encoded_labels.append(mapped_label)
+        encoded_labels = np.array(encoded_labels)
 
-        return mapped_labels
+        return encoded_labels
 
-    def prediction_decode(self, predictions):
+    def decode_predictions(self, predictions):
         predictions = np.column_stack(predictions)
         decoded_predictions = []
         for prediction in predictions:
@@ -362,7 +379,7 @@ class Recognizer:
         for _ in tqdm(range(self.hparams.num_epochs), desc='epoch'):
             for _ in tqdm(range(train_dataset.num_batches), desc='batch', leave=False):
                 images, labels = train_dataset.next_batch()
-                labels = self.map_labels(labels)
+                labels = self.encode_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels,
@@ -385,7 +402,7 @@ class Recognizer:
                     sess.run(self.reset_metric_op)
                     for _ in tqdm(range(val_dataset.num_batches), desc='val', leave=False):
                         images, labels = val_dataset.next_batch()
-                        labels = self.map_labels(labels)
+                        labels = self.encode_labels(labels)
 
                         feed_dict = {self.images: images,
                                      self.labels: labels}
@@ -418,7 +435,7 @@ class Recognizer:
             sess.run(self.reset_metric_op)
             for _ in tqdm(range(test_dataset.num_batches), desc='testing', leave=False):
                 images, labels = val_dataset.next_batch()
-                labels = self.map_labels(labels)
+                labels = self.encode_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels}
@@ -489,12 +506,13 @@ class Recognizer:
 
             predictions = sess.run(self.predictions, feed_dict={self.images: images})
 
-            predictions = self.prediction_decode(predictions)
+            predictions = self.decode_predictions(predictions)
 
             for image, prediction in zip(images, predictions):
                 plt.imshow(image)
                 plt.title(prediction)
                 plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
+                plt.close()
 
     def save(self, sess, path=None, global_step=None):
         if self.saver is None:
