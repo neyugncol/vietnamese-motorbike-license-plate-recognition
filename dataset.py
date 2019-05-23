@@ -27,7 +27,8 @@ class DataSet(object):
         self.image_files = []
         self.labels = []
         for file in image_files:
-            if file.endswith('.jpg') or file.endswith('.jpeg'):
+            file = file.upper()
+            if file.endswith('.JPG') or file.endswith('.JPEG'):
                 label = file.split('.')[0]
                 if len(label) != 9 and self.include_label:
                     continue
@@ -44,15 +45,12 @@ class DataSet(object):
         self.reset()
 
     def build_augmentor(self):
-        self.augmentor = iaa.Sometimes(0.7,
+        self.augmentor = iaa.Sometimes(0.5,
                                        iaa.OneOf([
-                                           iaa.Affine(scale=(0.8, 1.2)),
-                                           iaa.FastSnowyLandscape(lightness_multiplier=2.0),
-                                           iaa.Clouds(),
-                                           iaa.Fog(),
-                                           iaa.GammaContrast(gamma=3.0),
-                                           iaa.MotionBlur(k=20),
-                                           iaa.CoarseDropout(p=0.2, size_percent=1.0),
+                                           iaa.ChannelShuffle(p=1.0),
+                                           iaa.Invert(p=1.0, per_channel=True),
+                                           iaa.AddToHueAndSaturation((-45, 45), per_channel=True),
+                                           iaa.Emboss(alpha=1, strength=(0.5, 1.0))
                                        ]))
 
     def reset(self):
