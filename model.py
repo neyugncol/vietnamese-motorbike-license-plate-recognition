@@ -231,10 +231,13 @@ class Recognizer:
 
         labels = tf.placeholder(dtype=tf.int64, shape=[None, len(self.license_number_list)])
 
+        min_len = np.min([len(n) for n in self.license_number_list])
         losses = []
         for i, num_list in enumerate(self.license_number_list):
             loss = tf.losses.sparse_softmax_cross_entropy(labels=labels[:, i],
                                                           logits=self.logits[i])
+            weight = len(num_list) / min_len
+            loss = weight * loss
             losses.append(loss)
 
         cross_entropy_loss = tf.add_n(losses)
