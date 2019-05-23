@@ -15,17 +15,7 @@ class Recognizer:
         self.trainable = trainable
         self.hparams = hparams
         self.image_shape = [224, 224, 3]
-        self.license_number_list = [
-            '0123456789',
-            '0123456789',
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            '0123456789',
-            '0123456789',
-            '0123456789',
-            '0123456789',
-            '0123456789'
-        ]
+        self.license_number_list = hparams.license_number_list
         self.is_train = tf.placeholder_with_default(False, shape=[], name='is_train')
 
         self.layers = NeuralLayers(trainable=self.trainable,

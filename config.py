@@ -25,6 +25,18 @@ class HyperParameters(object):
         self.beta2 = 0.999
         self.epsilon = 1e-6
 
+        self.license_number_list = [
+            '0123456789',
+            '0123456789',
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            '0123456789',
+            '0123456789',
+            '0123456789',
+            '0123456789',
+            '0123456789'
+        ]
+
         self.save_dir = '/content/drive/My Drive/deep-learning/models/license-plate-recognizer-model/'
         self.summary_period = 1
         self.summary_dir = './summary/'
