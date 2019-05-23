@@ -326,20 +326,20 @@ class Recognizer:
         for var, value in zip(self.metric_vars, self.metric_values):
             sess.run(var.assign(value))
 
-    def map_labels(self, labels):
-        mapped_labels = []
+    def encode_labels(self, labels):
+        encoded_labels = []
         for label in labels:
             mapped_label = []
             for i, num in enumerate(label):
                 assert len(label) == len(self.license_number_list)
                 idx = self.license_number_list[i].index(num)
                 mapped_label.append(idx)
-            mapped_labels.append(mapped_label)
-        mapped_labels = np.array(mapped_labels)
+            encoded_labels.append(mapped_label)
+        encoded_labels = np.array(encoded_labels)
 
-        return mapped_labels
+        return encoded_labels
 
-    def prediction_decode(self, predictions):
+    def decode_predictions(self, predictions):
         predictions = np.column_stack(predictions)
         decoded_predictions = []
         for prediction in predictions:
@@ -379,7 +379,7 @@ class Recognizer:
         for _ in tqdm(range(self.hparams.num_epochs), desc='epoch'):
             for _ in tqdm(range(train_dataset.num_batches), desc='batch', leave=False):
                 images, labels = train_dataset.next_batch()
-                labels = self.map_labels(labels)
+                labels = self.encode_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels,
@@ -402,7 +402,7 @@ class Recognizer:
                     sess.run(self.reset_metric_op)
                     for _ in tqdm(range(val_dataset.num_batches), desc='val', leave=False):
                         images, labels = val_dataset.next_batch()
-                        labels = self.map_labels(labels)
+                        labels = self.encode_labels(labels)
 
                         feed_dict = {self.images: images,
                                      self.labels: labels}
@@ -435,7 +435,7 @@ class Recognizer:
             sess.run(self.reset_metric_op)
             for _ in tqdm(range(test_dataset.num_batches), desc='testing', leave=False):
                 images, labels = val_dataset.next_batch()
-                labels = self.map_labels(labels)
+                labels = self.encode_labels(labels)
 
                 feed_dict = {self.images: images,
                              self.labels: labels}
@@ -506,12 +506,13 @@ class Recognizer:
 
             predictions = sess.run(self.predictions, feed_dict={self.images: images})
 
-            predictions = self.prediction_decode(predictions)
+            predictions = self.decode_predictions(predictions)
 
             for image, prediction in zip(images, predictions):
                 plt.imshow(image)
                 plt.title(prediction)
                 plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
+                plt.close()
 
     def save(self, sess, path=None, global_step=None):
         if self.saver is None:
