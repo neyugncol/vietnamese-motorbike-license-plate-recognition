@@ -231,11 +231,13 @@ class Recognizer:
 
         labels = tf.placeholder(dtype=tf.int64, shape=[None, len(self.license_number_list)])
 
+        num_losses = []
         min_len = np.min([len(n) for n in self.license_number_list])
         losses = []
         for i, num_list in enumerate(self.license_number_list):
             loss = tf.losses.sparse_softmax_cross_entropy(labels=labels[:, i],
                                                           logits=self.logits[i])
+            num_losses.append(loss)
             weight = len(num_list) / min_len
             loss = weight * loss
             losses.append(loss)
@@ -261,6 +263,7 @@ class Recognizer:
 
         self.global_step = global_step
         self.labels = labels
+        self.num_losses = num_losses
         self.cross_entropy_loss = cross_entropy_loss
         self.regularization_loss = regularization_loss
         self.total_loss = total_loss
@@ -291,6 +294,15 @@ class Recognizer:
                            'total_loss': avg_total_loss_op,
                            'partial_accuracy': partial_accuracy_op,
                            'accuracy': accuracy_op}
+
+        for i, num_list in enumerate(self.license_number_list):
+            loss, loss_op = tf.metrics.mean_tensor(self.num_losses[i])
+            accuracy, accuracy_op = tf.metrics.accuracy(labels=self.labels[:, i],
+                                                        predictions=self.predictions[i])
+            self.metrics.update({'n{}_loss'.format(i): loss,
+                                 'n{}_accuracy'.format(i): accuracy})
+            self.metric_ops.update({'n{}_loss'.format(i): loss_op,
+                                    'n{}_accuracy'.format(i): accuracy_op})
 
         self.metric_vars = tf.get_collection(tf.GraphKeys.METRIC_VARIABLES)
         self.reset_metric_op = tf.variables_initializer(self.metric_vars)
