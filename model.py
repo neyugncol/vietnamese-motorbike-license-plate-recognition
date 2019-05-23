@@ -255,9 +255,9 @@ class Recognizer:
         gradients, _ = tf.clip_by_global_norm(gradients, hparams.clip_gradients)
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(update_ops):
-            train_op = optimizer.apply_gradients(zip(gradients, variables),
-                                                 global_step=global_step)
+        train_op = optimizer.apply_gradients(zip(gradients, variables),
+                                             global_step=global_step)
+        train_op = tf.group([train_op, update_ops])
 
         self.global_step = global_step
         self.labels = labels
@@ -275,9 +275,11 @@ class Recognizer:
         avg_total_loss, avg_total_loss_op = tf.metrics.mean_tensor(self.total_loss)
 
         predictions = tf.stack(self.predictions, axis=1)
-        different_count = tf.reduce_sum(tf.cast(tf.not_equal(self.labels, predictions), tf.int64), axis=1)
-        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.zeros_like(different_count),
-                                                    predictions=different_count)
+        partial_accuracy, partial_accuracy_op = tf.metrics.accuracy(labels=self.labels,
+                                                                    predictions=predictions)
+        matches = tf.reduce_all(tf.equal(self.labels, predictions), axis=1)
+        accuracy, accuracy_op = tf.metrics.accuracy(labels=tf.ones_like(matches),
+                                                    predictions=matches)
 
         self.metrics = {'cross_entropy_loss': avg_cross_entropy_loss,
                         'regularization_loss': avg_reg_loss,
