@@ -28,11 +28,13 @@ def main(args):
     if FLAGS.phase == 'train':
         train_dataset = DataSet(hparams.train_image_dir,
                                 hparams.batch_size, [224, 224, 3],
+                                len(hparams.license_number_list),
                                 include_label=True,
                                 shuffle=True,
                                 augmented=True)
         val_dataset = DataSet(hparams.val_image_dir,
                               hparams.batch_size, [224, 224, 3],
+                              len(hparams.license_number_list),
                               include_label=True,
                               shuffle=False,
                               augmented=False)
@@ -53,6 +55,7 @@ def main(args):
     else:
         test_dataset = DataSet(hparams.test_image_dir,
                               hparams.batch_size, [224, 224, 3],
+                              len(hparams.license_number_list),
                               include_label=False,
                               shuffle=False,
                               augmented=False)
