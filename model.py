@@ -447,55 +447,44 @@ class Recognizer:
             test_writer.flush()
             test_writer.close()
 
-    def eval(self, sess, config, eval_data, eval_name='/eval', load_checkpoint=False):
+    def eval(self, sess, test_dataset, checkpoint=None):
 
-        hparams = self.hparams
-
-        if not os.path.exists(config.summary_dir):
-            os.mkdir(config.summary_dir)
-        eval_writer = tf.summary.FileWriter(config.summary_dir + eval_name, sess.graph)
-
-        eval_dataset = self.build_dataset(eval_data)
-        iterator = eval_dataset.make_one_shot_iterator()
-        next_batch = iterator.get_next()
-
-        num_eval_batches = len(eval_data) // hparams.batch_size + 1
-
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
-
-        if type(load_checkpoint) == str:
-            self.load(sess, path=load_checkpoint)
-        elif load_checkpoint:
-            self.load(sess)
-
-        sess.run(self.reset_metric_op)
-        for _ in tqdm(range(num_eval_batches), desc='eval', leave=False):
-            images, labels = sess.run(next_batch)
-
-            feed_dict = {self.inputs: images,
-                         self.labels: labels}
-
-            eval_record = sess.run(self.metric_ops, feed_dict=feed_dict)
-
-        summary, global_step = sess.run([self.summary, self.global_step])
-
-        tqdm.write("Evaluation at step {}: loss: {:>10.5f}   {}: {:8.2f}%".format(global_step,
-                                                                                  eval_record['loss'],
-                                                                                  list(self.metrics)[1],
-                                                                                  eval_record[list(self.metrics)[1]]))
-        eval_writer.add_summary(summary, global_step)
-        eval_writer.flush()
-        eval_writer.close()
-
-    def test(self, sess, test_dataset, load_checkpoint=False, checkpoint=None):
         hparams = self.hparams
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-        if load_checkpoint:
-            self.load(sess, checkpoint)
+        self.load(sess, checkpoint)
+
+        # Testing
+        for _ in tqdm(range(test_dataset.num_batches), desc='batch', leave=False):
+            images, labels = test_dataset.next_batch()
+            encoded_labels = self.encode_labels(labels)
+
+            predictions, _ = sess.run([self.predictions, self.metric_ops], feed_dict={self.images: images,
+                                                                                      self.labels: encoded_labels})
+
+            predictions = self.decode_predictions(predictions)
+
+            for image, label, prediction in zip(images, labels, predictions):
+                plt.imshow(image)
+                plt.title(prediction)
+                plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, label))
+                plt.close()
+
+        result = sess.run(self.metrics)
+        with open('result-{}.txt'.format(checkpoint.split('/')[-1]), 'w') as f:
+            for name, value in result.items():
+                print('{}: {}'.format(name, value))
+                print('{}: {}'.format(name, value), file=f, end='\n')
+
+    def test(self, sess, test_dataset, checkpoint=None):
+        hparams = self.hparams
+
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+
+        self.load(sess, checkpoint)
 
         # Testing
         for _ in tqdm(range(test_dataset.num_batches), desc='batch', leave=False):

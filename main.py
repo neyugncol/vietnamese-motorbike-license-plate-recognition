@@ -52,6 +52,20 @@ def main(args):
                         val_dataset=val_dataset,
                         load_checkpoint=FLAGS.load_checkpoint,
                         checkpoint=FLAGS.checkpoint)
+    elif FLAGS.phase == 'eval':
+        test_dataset = DataSet(hparams.test_image_dir,
+                               hparams.batch_size, [224, 224, 3],
+                               len(hparams.license_number_list),
+                               include_label=True,
+                               shuffle=False,
+                               augmented=False)
+        with tf.Session() as sess:
+            model = Recognizer(hparams,
+                               trainable=True)
+            model.eval(sess,
+                       test_dataset,
+                       load_checkpoint=FLAGS.load_checkpoint,
+                       checkpoint=FLAGS.checkpoint)
     else:
         test_dataset = DataSet(hparams.test_image_dir,
                               hparams.batch_size, [224, 224, 3],
