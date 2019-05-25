@@ -64,7 +64,6 @@ def main(args):
                                trainable=True)
             model.eval(sess,
                        test_dataset,
-                       load_checkpoint=FLAGS.load_checkpoint,
                        checkpoint=FLAGS.checkpoint)
     else:
         test_dataset = DataSet(hparams.test_image_dir,
@@ -78,7 +77,6 @@ def main(args):
                                trainable=True)
             model.test(sess,
                        test_dataset,
-                       load_checkpoint=FLAGS.load_checkpoint,
                        checkpoint=FLAGS.checkpoint)
 
 
