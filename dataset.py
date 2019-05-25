@@ -10,12 +10,14 @@ class DataSet(object):
                  image_dir,
                  batch_size,
                  image_size,
+                 label_len,
                  include_label=False,
                  shuffle=True,
                  augmented=False):
         self.image_dir = image_dir
         self.batch_size = batch_size
         self.image_size = image_size
+        self.label_len = label_len
         self.include_label = include_label
         self.shuffle = shuffle
         self.augmented = augmented
@@ -30,7 +32,7 @@ class DataSet(object):
             f = file.upper()
             if f.endswith('.JPG') or f.endswith('.JPEG'):
                 label = f.split('.')[0]
-                if len(label) != 9 and self.include_label:
+                if len(label) != self.label_len and self.include_label:
                     continue
                 self.image_files.append(file)
                 self.labels.append(label)
