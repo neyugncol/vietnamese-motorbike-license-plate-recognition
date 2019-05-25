@@ -300,13 +300,8 @@ class Recognizer:
     def build_summary(self):
 
         with tf.name_scope('metric'):
-            branch_scope = tf.name_scope('branch')
             for metric_name, metric_tensor in self.metrics.items():
-                if metric_name.startswith('num'):
-                    with tf.name_scope(branch_scope):
-                        tf.summary.scalar(metric_name, metric_tensor)
-                else:
-                    tf.summary.scalar(metric_name, metric_tensor)
+                tf.summary.scalar(metric_name, metric_tensor)
 
         with tf.name_scope('hyperparam'):
             tf.summary.scalar('learning_rate', self.learning_rate)
