@@ -101,6 +101,9 @@ class DataSet(object):
     def load_image(self, image_file):
         image = cv2.imread(image_file)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        min_size = min(image.shape[0], image.shape[1])
+        pos_x, pos_y = (image.shape[1] - min_size) // 2, (image.shape[0] - min_size) // 2
+        image = image[pos_y:pos_y + min_size, pos_x:pos_x + min_size]
         image = cv2.resize(image, tuple(self.image_size[:2]))
 
         return image
