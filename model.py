@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from utils import NeuralLayers, Optimizer
 
@@ -443,8 +444,11 @@ class Recognizer:
             test_writer.close()
 
     def eval(self, sess, test_dataset, checkpoint=None):
-
         hparams = self.hparams
+
+        result = {'image': [],
+                  'ground truth': [],
+                  'prediction': []}
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -461,20 +465,30 @@ class Recognizer:
 
             predictions = self.decode_predictions(predictions)
 
-            for image, label, prediction in zip(images, labels, predictions):
+            for image, file, label, prediction in zip(images, test_dataset.current_image_files, labels, predictions):
+                result['image'].append(file)
+                result['ground truth'].append(label)
+                result['prediction'].append(prediction)
+
                 plt.imshow(image)
                 plt.title(prediction)
-                plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, label))
+                plt.savefig('{}/{}'.format(hparams.test_result_dir, file))
                 plt.close()
 
-        result = sess.run(self.metrics)
-        with open('result-{}.txt'.format(checkpoint.split('/')[-1]), 'w') as f:
-            for name, value in result.items():
+        result = pd.DataFrame.from_dict(result)
+        result.to_csv('result_{}.txt'.format(checkpoint.split('/')[-1]))
+
+        eval_result = sess.run(self.metrics)
+        with open('eval_{}.txt'.format(checkpoint.split('/')[-1]), 'w') as f:
+            for name, value in eval_result.items():
                 print('{}: {}'.format(name, value))
                 print('{}: {}'.format(name, value), file=f, end='\n')
 
     def test(self, sess, test_dataset, checkpoint=None):
         hparams = self.hparams
+
+        result = {'image': [],
+                  'prediction': []}
 
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
@@ -489,11 +503,17 @@ class Recognizer:
 
             predictions = self.decode_predictions(predictions)
 
-            for image, prediction in zip(images, predictions):
+            for image, file, prediction in zip(images, test_dataset.current_image_files, predictions):
+                result['image'].append(file)
+                result['prediction'].append(prediction)
+
                 plt.imshow(image)
                 plt.title(prediction)
-                plt.savefig('{}/{}.jpg'.format(hparams.test_result_dir, prediction))
+                plt.savefig('{}/{}'.format(hparams.test_result_dir, file))
                 plt.close()
+
+        result = pd.DataFrame.from_dict(result)
+        result.to_csv('result_{}.txt'.format(checkpoint.split('/')[-1]))
 
     def save(self, sess, save_dir=None, global_step=None):
         if self.saver is None:

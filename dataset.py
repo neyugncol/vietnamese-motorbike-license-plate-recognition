@@ -71,9 +71,9 @@ class DataSet(object):
 
         current_idxs = self.idxs[start:end]
 
-        image_files = self.image_files[current_idxs]
+        self.current_image_files = self.image_files[current_idxs]
 
-        images = self.load_images(image_files)
+        images = self.load_images(self.current_image_files)
 
         labels = self.labels[current_idxs]
 

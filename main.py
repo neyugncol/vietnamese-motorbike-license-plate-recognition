@@ -1,7 +1,4 @@
 import tensorflow as tf
-import json
-import numpy as np
-import pandas as pd
 
 from model import Recognizer
 from dataset import DataSet
