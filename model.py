@@ -476,10 +476,10 @@ class Recognizer:
                 plt.close()
 
         result = pd.DataFrame.from_dict(result)
-        result.to_csv('result_{}.txt'.format(checkpoint.split('/')[-1]))
+        result.to_csv('result.txt')
 
         eval_result = sess.run(self.metrics)
-        with open('eval_{}.txt'.format(checkpoint.split('/')[-1]), 'w') as f:
+        with open('eval.txt', 'w') as f:
             for name, value in eval_result.items():
                 print('{}: {}'.format(name, value))
                 print('{}: {}'.format(name, value), file=f, end='\n')
@@ -513,7 +513,7 @@ class Recognizer:
                 plt.close()
 
         result = pd.DataFrame.from_dict(result)
-        result.to_csv('result_{}.txt'.format(checkpoint.split('/')[-1]))
+        result.to_csv('result.txt')
 
     def save(self, sess, save_dir=None, global_step=None):
         if self.saver is None:
